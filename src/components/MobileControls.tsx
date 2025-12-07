@@ -6,10 +6,11 @@ interface MobileControlsProps {
   onMove: (direction: 'left' | 'right' | 'up' | 'down') => void
   onJump: () => void
   onPause: () => void
+  onInkCloud?: () => void
   isGameActive: boolean
 }
 
-export function MobileControls({ onMove, onJump, onPause, isGameActive }: MobileControlsProps) {
+export function MobileControls({ onMove, onJump, onPause, onInkCloud, isGameActive }: MobileControlsProps) {
   const isMobile = useIsMobile()
   const orientation = useDeviceOrientation()
   const { lightVibration, mediumVibration } = useHapticFeedback()
@@ -124,67 +125,34 @@ export function MobileControls({ onMove, onJump, onPause, isGameActive }: Mobile
 
       {orientation === 'portrait' && (
         <>
-          <div className="absolute bottom-32 left-1/2 transform -translate-x-1/2 flex space-x-8 pointer-events-auto">
-            <div className="flex flex-col items-center space-y-2">
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-12 h-12 rounded-full bg-black/20 border-white/30 text-white hover:bg-white/20"
-                onTouchStart={() => handleDirectionPress('up')}
-              >
-                ↑
-              </Button>
-              <div className="flex space-x-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-12 h-12 rounded-full bg-black/20 border-white/30 text-white hover:bg-white/20"
-                  onTouchStart={() => handleDirectionPress('left')}
-                >
-                  ←
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="w-12 h-12 rounded-full bg-black/20 border-white/30 text-white hover:bg-white/20"
-                  onTouchStart={() => handleDirectionPress('right')}
-                >
-                  →
-                </Button>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-12 h-12 rounded-full bg-black/20 border-white/30 text-white hover:bg-white/20"
-                onTouchStart={() => handleDirectionPress('down')}
-              >
-                ↓
-              </Button>
-            </div>
-
-            <div className="flex flex-col items-center space-y-2">
-              <Button
-                variant="outline"
-                size="lg"
-                className="w-16 h-16 rounded-full bg-blue-500/80 border-blue-300/50 text-white hover:bg-blue-400/80 font-bold text-sm"
-                onTouchStart={handleJumpPress}
-              >
-                JUMP
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-12 h-12 rounded-full bg-gray-500/80 border-gray-300/50 text-white hover:bg-gray-400/80"
-                onTouchStart={handlePausePress}
-              >
-                ⏸
-              </Button>
-            </div>
+          {/* Portrait mode: Use joystick on canvas (bottom-left) + action buttons (bottom-right) */}
+          <div className="absolute bottom-8 right-4 flex flex-col items-center space-y-4 pointer-events-auto">
+            <Button
+              variant="outline"
+              size="lg"
+              className="w-20 h-20 rounded-full bg-yellow-500/90 border-yellow-300/50 text-white hover:bg-yellow-400/90 font-bold text-2xl shadow-lg active:scale-95 transition-transform"
+              onTouchStart={handleJumpPress}
+              title="Jet Dash"
+            >
+              ⚡
+            </Button>
+            <Button
+              variant="outline"
+              size="lg"
+              className="w-20 h-20 rounded-full bg-purple-500/90 border-purple-300/50 text-white hover:bg-purple-400/90 font-bold text-2xl shadow-lg active:scale-95 transition-transform"
+              onTouchStart={() => {
+                if (onInkCloud) onInkCloud();
+                mediumVibration();
+              }}
+              title="Ink Cloud"
+            >
+              💨
+            </Button>
           </div>
 
-          <div className="absolute top-4 left-1/2 transform -translate-x-1/2 pointer-events-auto">
-            <div className="bg-black/60 backdrop-blur-sm rounded-lg px-4 py-2 text-white text-sm text-center">
-              <p>Swipe to move • Tap to jump • Long press to pause</p>
+          <div className="absolute top-4 left-1/2 transform -translate-x-1/2 pointer-events-auto max-w-[90vw]">
+            <div className="bg-black/70 backdrop-blur-sm rounded-lg px-3 py-2 text-white text-xs text-center">
+              <p>🕹️ Joystick: Move • ⚡: Dash • 💨: Ink</p>
             </div>
           </div>
         </>

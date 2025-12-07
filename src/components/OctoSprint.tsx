@@ -1649,6 +1649,11 @@ export const OctoSprint: React.FC = () => {
     pauseGame();
   }, [pauseGame]);
 
+  const handleMobileInkCloud = useCallback(() => {
+    if (!gameState.isPlaying || gameState.isPaused) return;
+    useInkCloud();
+  }, [gameState.isPlaying, gameState.isPaused, useInkCloud]);
+
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
@@ -4667,6 +4672,7 @@ export const OctoSprint: React.FC = () => {
         onMove={handleMobileMove}
         onJump={handleMobileJump}
         onPause={handleMobilePause}
+        onInkCloud={handleMobileInkCloud}
         isGameActive={gameState.isPlaying && !gameState.isPaused}
       />
 
