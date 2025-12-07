@@ -4018,8 +4018,9 @@ export const OctoSprint: React.FC = () => {
       ctx.restore();
     }
 
-    // Mobile joystick controls - only show on mobile devices
-    if (isMobile) {
+    // Mobile joystick controls - show on mobile devices or touch-enabled devices
+    const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    if (isMobile || isTouchDevice) {
       // Reset transforms for UI elements (joystick should be fixed to screen)
       ctx.save();
       ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset to identity matrix
