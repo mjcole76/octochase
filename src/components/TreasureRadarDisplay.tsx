@@ -37,22 +37,22 @@ export function TreasureRadarDisplay({ radar, treasuresCollected, totalTreasures
   };
 
   return (
-    <div className="absolute top-20 right-4 bg-black/80 backdrop-blur-sm rounded-lg p-4 min-w-[250px] border-2 border-yellow-500">
-      <div className="flex items-center justify-between mb-3">
-        <h3 className="text-lg font-bold text-yellow-400">🏴‍☠️ Treasure Radar</h3>
-        <span className="text-sm text-gray-300">
+    <div className="absolute top-20 right-2 sm:right-4 bg-black/80 backdrop-blur-sm rounded-lg p-3 sm:p-4 w-[45vw] sm:min-w-[250px] sm:w-auto max-w-[280px] border-2 border-yellow-500 z-20">
+      <div className="flex items-center justify-between mb-2 sm:mb-3">
+        <h3 className="text-sm sm:text-lg font-bold text-yellow-400 truncate">🏴‍☠️ Radar</h3>
+        <span className="text-xs sm:text-sm text-gray-300 ml-2">
           {treasuresCollected}/{totalTreasures}
         </span>
       </div>
       
-      <div className="space-y-3">
+      <div className="space-y-2 sm:space-y-3">
         <div>
-          <div className={`text-sm font-semibold ${getDirectionColor()} mb-1`}>
+          <div className={`text-xs sm:text-sm font-semibold ${getDirectionColor()} mb-1`}>
             {getDirectionText()}
           </div>
-          <div className="w-full bg-gray-700 rounded-full h-2">
+          <div className="w-full bg-gray-700 rounded-full h-1.5 sm:h-2">
             <div
-              className={`h-2 rounded-full transition-all duration-300 ${
+              className={`h-1.5 sm:h-2 rounded-full transition-all duration-300 ${
                 radar.direction === 'hot' ? 'bg-red-500' :
                 radar.direction === 'warmer' ? 'bg-orange-400' :
                 radar.direction === 'colder' ? 'bg-blue-400' :
@@ -63,9 +63,9 @@ export function TreasureRadarDisplay({ radar, treasuresCollected, totalTreasures
           </div>
         </div>
         
-        <div className="text-xs text-gray-400 space-y-1">
-          <div>📍 Distance: {Math.round(radar.distance)}m</div>
-          <div className="text-yellow-300">💡 Move around to find treasures!</div>
+        <div className="text-[10px] sm:text-xs text-gray-400 space-y-0.5 sm:space-y-1">
+          <div>📍 {Math.round(radar.distance)}m</div>
+          <div className="text-yellow-300 hidden sm:block">💡 Move to find treasures!</div>
         </div>
       </div>
     </div>
