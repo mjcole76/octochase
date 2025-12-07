@@ -4018,66 +4018,70 @@ export const OctoSprint: React.FC = () => {
       ctx.restore();
     }
 
-    // Reset transforms for UI elements (joystick should be fixed to screen)
-    ctx.save();
-    ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset to identity matrix
+    // Mobile joystick controls - only show on mobile devices
+    if (isMobile) {
+      // Reset transforms for UI elements (joystick should be fixed to screen)
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset to identity matrix
 
-    // Show large touch area indicator - much bigger for better visibility
-    ctx.globalAlpha = joystickActive ? 0.4 : 0.2;
-    ctx.fillStyle = '#00ffff';
-    ctx.beginPath();
-    ctx.arc(80, GAME_HEIGHT - 80, 150, 0, 2 * Math.PI);
-    ctx.fill();
-    
-    // Add visual guide text
-    if (!joystickActive) {
-      ctx.globalAlpha = 0.8;
+      // Show large touch area indicator - much bigger for better visibility
+      ctx.globalAlpha = joystickActive ? 0.4 : 0.2;
+      ctx.fillStyle = '#00ffff';
+      ctx.beginPath();
+      ctx.arc(80, GAME_HEIGHT - 80, 150, 0, 2 * Math.PI);
+      ctx.fill();
+      
+      // Add visual guide text
+      if (!joystickActive) {
+        ctx.globalAlpha = 0.8;
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 14px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('TAP HERE', 80, GAME_HEIGHT - 120);
+        ctx.font = '12px Arial';
+        ctx.fillText('TO MOVE', 80, GAME_HEIGHT - 105);
+      }
+
+      // Always show joystick for better visibility
+      const joystickX = 80;
+      const joystickY = GAME_HEIGHT - 80;
+      
+      ctx.save();
+      ctx.globalAlpha = joystickActive ? 0.9 : 0.6;
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(joystickX, joystickY, JOYSTICK_SIZE / 2, 0, 2 * Math.PI);
+      ctx.stroke();
+      
+      // Inner circle
+      ctx.globalAlpha = joystickActive ? 0.7 : 0.3;
       ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 14px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText('TAP HERE', 80, GAME_HEIGHT - 120);
-      ctx.font = '12px Arial';
-      ctx.fillText('TO MOVE', 80, GAME_HEIGHT - 105);
-    }
+      ctx.beginPath();
+      ctx.arc(joystickX, joystickY, JOYSTICK_SIZE / 2 - 5, 0, 2 * Math.PI);
+      ctx.fill();
+      
+      // Joystick knob
+      ctx.globalAlpha = 1;
+      ctx.fillStyle = joystickActive ? '#00ff00' : '#dddddd';
+      ctx.beginPath();
+      ctx.arc(joystickX + joystickPosition.x, joystickY + joystickPosition.y, 20, 0, 2 * Math.PI);
+      ctx.fill();
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+      
+      // Add "MOVE" text when not active
+      if (!joystickActive) {
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 12px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText('MOVE', joystickX, joystickY + 4);
+      }
 
-    // Always show joystick for better visibility
-    const joystickX = 80;
-    const joystickY = GAME_HEIGHT - 80;
-    
-    ctx.save();
-    ctx.globalAlpha = joystickActive ? 0.9 : 0.6;
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.arc(joystickX, joystickY, JOYSTICK_SIZE / 2, 0, 2 * Math.PI);
-    ctx.stroke();
-    
-    // Inner circle
-    ctx.globalAlpha = joystickActive ? 0.7 : 0.3;
-    ctx.fillStyle = '#ffffff';
-    ctx.beginPath();
-    ctx.arc(joystickX, joystickY, JOYSTICK_SIZE / 2 - 5, 0, 2 * Math.PI);
-    ctx.fill();
-    
-    // Joystick knob
-    ctx.globalAlpha = 1;
-    ctx.fillStyle = joystickActive ? '#00ff00' : '#dddddd';
-    ctx.beginPath();
-    ctx.arc(joystickX + joystickPosition.x, joystickY + joystickPosition.y, 20, 0, 2 * Math.PI);
-    ctx.fill();
-    ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 3;
-    ctx.stroke();
-    
-    // Add "MOVE" text when not active
-    if (!joystickActive) {
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 12px Arial';
-      ctx.textAlign = 'center';
-      ctx.fillText('MOVE', joystickX, joystickY + 4);
+      ctx.restore(); // End joystick rendering
+      ctx.restore(); // End UI transform
     }
-
-    ctx.restore(); // End UI transform
 
     // Draw edge warning indicators if octopus is near world bounds
     const warningMargin = PLAYER_SIZE * 3;
