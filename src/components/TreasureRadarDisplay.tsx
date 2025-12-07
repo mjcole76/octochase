@@ -7,7 +7,7 @@ interface TreasureRadarDisplayProps {
   totalTreasures: number;
 }
 
-export function TreasureRadarDisplay({ radar, treasuresCollected, totalTreasures }: TreasureRadarDisplayProps) {
+export const TreasureRadarDisplay = React.memo(({ radar, treasuresCollected, totalTreasures }: TreasureRadarDisplayProps) => {
   if (!radar.active) return null;
 
   const getDirectionColor = () => {
@@ -70,4 +70,4 @@ export function TreasureRadarDisplay({ radar, treasuresCollected, totalTreasures
       </div>
     </div>
   );
-}
+});

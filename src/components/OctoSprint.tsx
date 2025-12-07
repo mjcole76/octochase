@@ -1111,8 +1111,10 @@ export const OctoSprint: React.FC = () => {
   };
 
   const createParticles = (position: Position, type: Particle['type'], count: number = 5, color: string = '#ffffff') => {
+    // Mobile optimization: reduce particle count by 50%
+    const adjustedCount = isMobile ? Math.ceil(count / 2) : count;
     const newParticles: Particle[] = [];
-    for (let i = 0; i < count; i++) {
+    for (let i = 0; i < adjustedCount; i++) {
       const angle = (i / count) * 2 * Math.PI + Math.random() * 0.5;
       let speed = 100 + Math.random() * 100;
       let size = 2 + Math.random() * 4;
@@ -1669,11 +1671,11 @@ export const OctoSprint: React.FC = () => {
     if (gameState.currentGameMode === 'treasure_hunt' && gameState.isPlaying) {
       const interval = setInterval(() => {
         updateTreasureRadar();
-      }, 500); // Update every 500ms
+      }, isMobile ? 1000 : 500); // Update every 1s on mobile, 500ms on desktop
       
       return () => clearInterval(interval);
     }
-  }, [gameState.currentGameMode, gameState.isPlaying, player.position, treasures]);
+  }, [gameState.currentGameMode, gameState.isPlaying, isMobile]);
 
   // Track bonus goals progress
   useEffect(() => {
@@ -2863,10 +2865,19 @@ export const OctoSprint: React.FC = () => {
   const draw = useCallback(() => {
     try {
       const canvas = canvasRef.current;
-      const ctx = canvas?.getContext('2d');
+      const ctx = canvas?.getContext('2d', { 
+        alpha: false,
+        desynchronized: true,
+        willReadFrequently: false
+      });
       if (!canvas || !ctx) {
         console.warn('Canvas or context not available');
         return;
+      }
+      
+      // Mobile optimization: reduce quality for better performance
+      if (isMobile) {
+        ctx.imageSmoothingEnabled = false;
       }
 
       // Safety check - ensure we have valid dimensions

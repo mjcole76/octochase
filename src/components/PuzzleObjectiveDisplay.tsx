@@ -14,7 +14,7 @@ interface PuzzleObjectiveDisplayProps {
   };
 }
 
-export function PuzzleObjectiveDisplay({ puzzle, movesRemaining, stats }: PuzzleObjectiveDisplayProps) {
+export const PuzzleObjectiveDisplay = React.memo(({ puzzle, movesRemaining, stats }: PuzzleObjectiveDisplayProps) => {
   const getProgress = () => {
     const req = puzzle.requirements;
     
@@ -114,4 +114,4 @@ export function PuzzleObjectiveDisplay({ puzzle, movesRemaining, stats }: Puzzle
       </div>
     </div>
   );
-}
+});
