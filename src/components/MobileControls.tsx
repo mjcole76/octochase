@@ -123,10 +123,10 @@ export function MobileControls({ onMove, onJump, onPause, onInkCloud, isGameActi
         </>
       )}
 
-      {orientation === 'portrait' && (
+      {orientation === 'portrait' && isGameActive && (
         <>
           {/* Portrait mode: Use joystick on canvas (bottom-left) + action buttons (bottom-right) */}
-          <div className="absolute bottom-8 right-4 flex flex-col items-center space-y-4 pointer-events-auto">
+          <div className="absolute bottom-8 right-4 flex flex-col items-center space-y-4 pointer-events-auto z-50">
             <Button
               variant="outline"
               size="lg"
@@ -150,7 +150,7 @@ export function MobileControls({ onMove, onJump, onPause, onInkCloud, isGameActi
             </Button>
           </div>
 
-          <div className="absolute top-4 left-1/2 transform -translate-x-1/2 pointer-events-auto max-w-[90vw]">
+          <div className="absolute top-4 left-1/2 transform -translate-x-1/2 pointer-events-auto max-w-[90vw] z-50">
             <div className="bg-black/70 backdrop-blur-sm rounded-lg px-3 py-2 text-white text-xs text-center">
               <p>🕹️ Joystick: Move • ⚡: Dash • 💨: Ink</p>
             </div>
