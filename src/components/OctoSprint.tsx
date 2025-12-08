@@ -156,12 +156,52 @@ interface WeatherEffect {
   particles: Particle[];
 }
 
-const GAME_WIDTH = 1200;  // Increased from 800
-const GAME_HEIGHT = 800;  // Increased from 600
+const BASE_GAME_WIDTH = 1200;  // Base width for desktop
+const BASE_GAME_HEIGHT = 800;  // Base height for desktop
 const WORLD_WIDTH = 1400;  // Increased proportionally
 const WORLD_HEIGHT = 1000;  // Increased proportionally
 const PLAYER_SIZE = 40;
 const JOYSTICK_SIZE = 80;
+
+// Helper to calculate responsive game dimensions
+const getResponsiveGameDimensions = (isMobile: boolean, orientation: 'portrait' | 'landscape') => {
+  if (typeof window === 'undefined') {
+    return { width: BASE_GAME_WIDTH, height: BASE_GAME_HEIGHT, scale: 1 };
+  }
+  
+  const safeAreaTop = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--safe-area-inset-top') || '0', 10);
+  const safeAreaBottom = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--safe-area-inset-bottom') || '0', 10);
+  
+  if (isMobile) {
+    const availableWidth = window.innerWidth - 16; // 8px padding on each side
+    const availableHeight = window.innerHeight - 180 - safeAreaTop - safeAreaBottom; // Leave room for UI/controls
+    
+    if (orientation === 'landscape') {
+      // Landscape: prioritize width, constrain height
+      const scale = Math.min(availableWidth / BASE_GAME_WIDTH, availableHeight / BASE_GAME_HEIGHT);
+      return {
+        width: Math.floor(BASE_GAME_WIDTH * scale),
+        height: Math.floor(BASE_GAME_HEIGHT * scale),
+        scale
+      };
+    } else {
+      // Portrait: fit to width, adjust height proportionally
+      const scale = Math.min(availableWidth / BASE_GAME_WIDTH, 1);
+      const scaledHeight = Math.min(availableHeight, BASE_GAME_HEIGHT * scale);
+      return {
+        width: Math.floor(availableWidth),
+        height: Math.floor(scaledHeight),
+        scale
+      };
+    }
+  }
+  
+  return { width: BASE_GAME_WIDTH, height: BASE_GAME_HEIGHT, scale: 1 };
+};
+
+// Use these for game logic (keep consistent regardless of display size)
+const GAME_WIDTH = BASE_GAME_WIDTH;
+const GAME_HEIGHT = BASE_GAME_HEIGHT;
 
 const GAME_MODES: Record<GameMode, GameModeConfig> = {
   classic: {
@@ -291,6 +331,27 @@ export const OctoSprint: React.FC = () => {
   const orientation = useDeviceOrientation();
   const { isLowPerformance } = useMobilePerformance();
   const { processGameEnd, getActiveSkillEffects } = useProgression();
+  
+  // Responsive canvas dimensions
+  const [canvasDimensions, setCanvasDimensions] = useState(() => 
+    getResponsiveGameDimensions(false, 'portrait')
+  );
+  
+  // Update canvas dimensions on resize
+  useEffect(() => {
+    const handleResize = () => {
+      setCanvasDimensions(getResponsiveGameDimensions(isMobile, orientation));
+    };
+    
+    handleResize(); // Initial calculation
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('orientationchange', handleResize);
+    
+    return () => {
+      window.removeEventListener('resize', handleResize);
+      window.removeEventListener('orientationchange', handleResize);
+    };
+  }, [isMobile, orientation]);
   const [gameState, setGameState] = useState<GameState>({
     isPlaying: false,
     isPaused: false,
@@ -4537,8 +4598,8 @@ export const OctoSprint: React.FC = () => {
   }
 
   return (
-    <div className="relative bg-blue-950 min-h-screen overflow-hidden">
-      <div className={`absolute top-4 ${isMobile ? 'left-2 right-2' : 'left-4'} z-10 bg-black bg-opacity-50 rounded-lg ${isMobile ? 'p-2' : 'p-4'} text-white`}>
+    <div className={`relative bg-blue-950 min-h-screen min-h-[100dvh] overflow-hidden ${isMobile ? 'pb-safe' : ''}`} style={{ paddingBottom: isMobile ? 'env(safe-area-inset-bottom)' : 0 }}>
+      <div className={`absolute ${isMobile ? 'top-2 left-2 right-2' : 'top-4 left-4'} z-10 bg-black/60 backdrop-blur-sm rounded-lg ${isMobile ? 'p-2' : 'p-4'} text-white`} style={{ top: isMobile ? 'max(0.5rem, env(safe-area-inset-top))' : undefined }}>
         <div className={`flex ${isMobile ? 'flex-wrap' : ''} items-center ${isMobile ? 'gap-2' : 'gap-4'} mb-2 ${isMobile ? 'text-xs' : ''}`}>
           <span>❤️ {gameState.lives}</span>
           <span>🎯 {gameState.score}</span>
@@ -4638,16 +4699,19 @@ export const OctoSprint: React.FC = () => {
 
       <canvas
         ref={canvasRef}
-        width={isMobile ? Math.min(GAME_WIDTH, window.innerWidth - 20) : GAME_WIDTH}
-        height={isMobile ? Math.min(GAME_HEIGHT, (window.innerHeight - 200)) : GAME_HEIGHT}
-        className={`mx-auto ${isMobile ? 'mt-4' : 'mt-8'} border-2 border-blue-400 rounded-lg ${isMobile && orientation === 'landscape' ? 'max-h-[60vh]' : ''}`}
+        width={GAME_WIDTH}
+        height={GAME_HEIGHT}
+        className={`mx-auto ${isMobile ? 'mt-2' : 'mt-8'} border-2 border-blue-400 rounded-lg shadow-lg shadow-blue-500/20`}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         style={{ 
           touchAction: 'none',
-          maxWidth: isMobile ? '100vw' : 'none',
-          maxHeight: isMobile ? '60vh' : 'none'
+          width: canvasDimensions.width,
+          height: canvasDimensions.height,
+          maxWidth: '100%',
+          objectFit: 'contain',
+          imageRendering: 'crisp-edges'
         }}
       />
 
