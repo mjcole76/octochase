@@ -1916,13 +1916,13 @@ export const OctoSprint: React.FC = () => {
       return newPlayer;
     });
 
-    // Update camera to follow player with improved constraints to keep octopus visible
+    // Update camera to follow player - ALWAYS keep octopus visible
     setCamera(prevCamera => {
       // Target camera position to center the player
       const targetCameraX = player.position.x - GAME_WIDTH / 2;
       const targetCameraY = player.position.y - GAME_HEIGHT / 2;
       
-      // Constrain camera to world bounds with safety margins
+      // Constrain camera to world bounds
       const minCameraX = 0;
       const maxCameraX = Math.max(0, WORLD_WIDTH - GAME_WIDTH);
       const minCameraY = 0;
@@ -1931,31 +1931,55 @@ export const OctoSprint: React.FC = () => {
       let constrainedTargetX = Math.max(minCameraX, Math.min(maxCameraX, targetCameraX));
       let constrainedTargetY = Math.max(minCameraY, Math.min(maxCameraY, targetCameraY));
       
-      // Emergency visibility check - if octopus would be off screen, force camera adjustment
+      // STRICT visibility check - larger margin to keep player well within view
+      const visibilityMargin = PLAYER_SIZE * 4; // Much larger margin (160px)
       const playerScreenX = player.position.x - constrainedTargetX;
       const playerScreenY = player.position.y - constrainedTargetY;
-      const visibilityMargin = PLAYER_SIZE * 2;
       
+      // If player would be too close to any edge, immediately adjust camera target
       if (playerScreenX < visibilityMargin) {
-        constrainedTargetX = Math.max(minCameraX, player.position.x - visibilityMargin);
+        constrainedTargetX = player.position.x - visibilityMargin;
       } else if (playerScreenX > GAME_WIDTH - visibilityMargin) {
-        constrainedTargetX = Math.min(maxCameraX, player.position.x - (GAME_WIDTH - visibilityMargin));
+        constrainedTargetX = player.position.x - (GAME_WIDTH - visibilityMargin);
       }
       
       if (playerScreenY < visibilityMargin) {
-        constrainedTargetY = Math.max(minCameraY, player.position.y - visibilityMargin);
+        constrainedTargetY = player.position.y - visibilityMargin;
       } else if (playerScreenY > GAME_HEIGHT - visibilityMargin) {
-        constrainedTargetY = Math.min(maxCameraY, player.position.y - (GAME_HEIGHT - visibilityMargin));
+        constrainedTargetY = player.position.y - (GAME_HEIGHT - visibilityMargin);
       }
       
-      // Faster camera movement for better tracking
-      const cameraSpeed = 0.25;
-      const newCameraX = prevCamera.x + (constrainedTargetX - prevCamera.x) * cameraSpeed;
-      const newCameraY = prevCamera.y + (constrainedTargetY - prevCamera.y) * cameraSpeed;
+      // Re-apply world bounds after visibility adjustment
+      constrainedTargetX = Math.max(minCameraX, Math.min(maxCameraX, constrainedTargetX));
+      constrainedTargetY = Math.max(minCameraY, Math.min(maxCameraY, constrainedTargetY));
+      
+      // Calculate distance to target
+      const distX = Math.abs(constrainedTargetX - prevCamera.x);
+      const distY = Math.abs(constrainedTargetY - prevCamera.y);
+      
+      // Use faster camera when player is far from center or moving fast
+      const baseCameraSpeed = 0.15;
+      const urgentCameraSpeed = 0.5; // Much faster when needed
+      const cameraSpeedX = distX > 100 ? urgentCameraSpeed : baseCameraSpeed;
+      const cameraSpeedY = distY > 100 ? urgentCameraSpeed : baseCameraSpeed;
+      
+      let newCameraX = prevCamera.x + (constrainedTargetX - prevCamera.x) * cameraSpeedX;
+      let newCameraY = prevCamera.y + (constrainedTargetY - prevCamera.y) * cameraSpeedY;
+      
+      // FINAL safety check - if player would STILL be off screen, snap camera immediately
+      const finalPlayerScreenX = player.position.x - newCameraX;
+      const finalPlayerScreenY = player.position.y - newCameraY;
+      const safetyMargin = PLAYER_SIZE;
+      
+      if (finalPlayerScreenX < safetyMargin || finalPlayerScreenX > GAME_WIDTH - safetyMargin) {
+        newCameraX = Math.max(minCameraX, Math.min(maxCameraX, player.position.x - GAME_WIDTH / 2));
+      }
+      if (finalPlayerScreenY < safetyMargin || finalPlayerScreenY > GAME_HEIGHT - safetyMargin) {
+        newCameraY = Math.max(minCameraY, Math.min(maxCameraY, player.position.y - GAME_HEIGHT / 2));
+      }
       
       // Ensure camera values are valid numbers (prevent NaN)
       if (isNaN(newCameraX) || isNaN(newCameraY)) {
-        console.warn('Camera position became NaN, resetting to center player');
         return {
           x: Math.max(0, Math.min(maxCameraX, player.position.x - GAME_WIDTH / 2)),
           y: Math.max(0, Math.min(maxCameraY, player.position.y - GAME_HEIGHT / 2))
