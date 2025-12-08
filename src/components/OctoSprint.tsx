@@ -170,27 +170,44 @@ const getResponsiveGameDimensions = (isMobile: boolean, orientation: 'portrait' 
   }
   
   if (isMobile) {
-    const availableWidth = window.innerWidth - 8; // Minimal padding
-    // Use most of the screen height - just leave 100px for top HUD
-    const availableHeight = window.innerHeight * 0.65; // 65% of screen for game canvas
+    const screenWidth = window.innerWidth;
+    const screenHeight = window.innerHeight;
     
     if (orientation === 'landscape') {
-      const scale = Math.min(availableWidth / BASE_GAME_WIDTH, (window.innerHeight * 0.85) / BASE_GAME_HEIGHT);
+      // Landscape: use most of the screen
+      const availableHeight = screenHeight - 60; // Small margin for browser UI
+      const availableWidth = screenWidth - 16;
+      const scale = Math.min(availableWidth / BASE_GAME_WIDTH, availableHeight / BASE_GAME_HEIGHT);
       return {
         width: Math.floor(BASE_GAME_WIDTH * scale),
         height: Math.floor(BASE_GAME_HEIGHT * scale),
         scale
       };
     } else {
-      // Portrait: maximize width, good height
-      const width = availableWidth;
-      const aspectRatio = BASE_GAME_HEIGHT / BASE_GAME_WIDTH;
-      const height = Math.min(availableHeight, width * aspectRatio);
-      return {
-        width: Math.floor(width),
-        height: Math.floor(height),
-        scale: width / BASE_GAME_WIDTH
-      };
+      // Portrait: fill the width, use 80% of height for canvas
+      const availableWidth = screenWidth - 8;
+      const availableHeight = screenHeight * 0.80; // 80% of screen height!
+      
+      // Calculate scale to fit width
+      const scaleByWidth = availableWidth / BASE_GAME_WIDTH;
+      // Calculate what height that gives us
+      const scaledHeight = BASE_GAME_HEIGHT * scaleByWidth;
+      
+      // If scaled height fits, use it; otherwise scale by height
+      if (scaledHeight <= availableHeight) {
+        return {
+          width: Math.floor(availableWidth),
+          height: Math.floor(scaledHeight),
+          scale: scaleByWidth
+        };
+      } else {
+        const scaleByHeight = availableHeight / BASE_GAME_HEIGHT;
+        return {
+          width: Math.floor(BASE_GAME_WIDTH * scaleByHeight),
+          height: Math.floor(availableHeight),
+          scale: scaleByHeight
+        };
+      }
     }
   }
   
@@ -4598,8 +4615,8 @@ export const OctoSprint: React.FC = () => {
   }
 
   return (
-    <div className={`relative bg-blue-950 min-h-screen min-h-[100dvh] overflow-hidden ${isMobile ? 'pb-safe' : ''}`} style={{ paddingBottom: isMobile ? 'env(safe-area-inset-bottom)' : 0 }}>
-      <div className={`absolute ${isMobile ? 'top-2 left-2 right-2' : 'top-4 left-4'} z-10 bg-black/60 backdrop-blur-sm rounded-lg ${isMobile ? 'p-2' : 'p-4'} text-white`} style={{ top: isMobile ? 'max(0.5rem, env(safe-area-inset-top))' : undefined }}>
+    <div className={`relative bg-blue-950 min-h-screen min-h-[100dvh] ${isMobile ? '' : 'overflow-hidden'}`}>
+      <div className={`${isMobile ? 'sticky top-0 left-0 right-0' : 'absolute top-4 left-4'} z-10 bg-black/60 backdrop-blur-sm rounded-lg ${isMobile ? 'p-2 mx-2 mt-1' : 'p-4'} text-white`}>
         <div className={`flex ${isMobile ? 'flex-wrap' : ''} items-center ${isMobile ? 'gap-2' : 'gap-4'} mb-2 ${isMobile ? 'text-xs' : ''}`}>
           <span>❤️ {gameState.lives}</span>
           <span>🎯 {gameState.score}</span>
@@ -4701,16 +4718,14 @@ export const OctoSprint: React.FC = () => {
         ref={canvasRef}
         width={GAME_WIDTH}
         height={GAME_HEIGHT}
-        className={`mx-auto ${isMobile ? 'mt-2' : 'mt-8'} border-2 border-blue-400 rounded-lg shadow-lg shadow-blue-500/20`}
+        className={`block mx-auto ${isMobile ? 'mt-1' : 'mt-8'} border-2 border-blue-400 rounded-lg shadow-lg shadow-blue-500/20`}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         style={{ 
           touchAction: 'none',
-          width: canvasDimensions.width,
-          height: canvasDimensions.height,
-          maxWidth: '100%',
-          objectFit: 'contain',
+          width: `${canvasDimensions.width}px`,
+          height: `${canvasDimensions.height}px`,
           imageRendering: 'crisp-edges'
         }}
       />
