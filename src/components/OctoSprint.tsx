@@ -169,29 +169,27 @@ const getResponsiveGameDimensions = (isMobile: boolean, orientation: 'portrait' 
     return { width: BASE_GAME_WIDTH, height: BASE_GAME_HEIGHT, scale: 1 };
   }
   
-  const safeAreaTop = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--safe-area-inset-top') || '0', 10);
-  const safeAreaBottom = parseInt(getComputedStyle(document.documentElement).getPropertyValue('--safe-area-inset-bottom') || '0', 10);
-  
   if (isMobile) {
-    const availableWidth = window.innerWidth - 16; // 8px padding on each side
-    const availableHeight = window.innerHeight - 180 - safeAreaTop - safeAreaBottom; // Leave room for UI/controls
+    const availableWidth = window.innerWidth - 8; // Minimal padding
+    // Use most of the screen height - just leave 100px for top HUD
+    const availableHeight = window.innerHeight * 0.65; // 65% of screen for game canvas
     
     if (orientation === 'landscape') {
-      // Landscape: prioritize width, constrain height
-      const scale = Math.min(availableWidth / BASE_GAME_WIDTH, availableHeight / BASE_GAME_HEIGHT);
+      const scale = Math.min(availableWidth / BASE_GAME_WIDTH, (window.innerHeight * 0.85) / BASE_GAME_HEIGHT);
       return {
         width: Math.floor(BASE_GAME_WIDTH * scale),
         height: Math.floor(BASE_GAME_HEIGHT * scale),
         scale
       };
     } else {
-      // Portrait: fit to width, adjust height proportionally
-      const scale = Math.min(availableWidth / BASE_GAME_WIDTH, 1);
-      const scaledHeight = Math.min(availableHeight, BASE_GAME_HEIGHT * scale);
+      // Portrait: maximize width, good height
+      const width = availableWidth;
+      const aspectRatio = BASE_GAME_HEIGHT / BASE_GAME_WIDTH;
+      const height = Math.min(availableHeight, width * aspectRatio);
       return {
-        width: Math.floor(availableWidth),
-        height: Math.floor(scaledHeight),
-        scale
+        width: Math.floor(width),
+        height: Math.floor(height),
+        scale: width / BASE_GAME_WIDTH
       };
     }
   }
@@ -446,7 +444,8 @@ export const OctoSprint: React.FC = () => {
   const [xpGained, setXpGained] = useState(0);
   const [nextFoodPosition, setNextFoodPosition] = useState<Position | null>(null);
   const [joystickActive, setJoystickActive] = useState(false);
-  const [joystickPosition, setJoystickPosition] = useState<Position>({ x: 0, y: 0 });
+  // Use ref for joystick position to avoid state update lag on mobile
+  const joystickPositionRef = useRef<Position>({ x: 0, y: 0 });
   const [keysPressed, setKeysPressed] = useState<Set<string>>(new Set());
   const touchRef = useRef<{ startX: number; startY: number; currentX: number; currentY: number } | null>(null);
   const [environmentalEffects, setEnvironmentalEffects] = useState<EnvironmentalEffect[]>([]);
@@ -1559,20 +1558,20 @@ export const OctoSprint: React.FC = () => {
     const maxDistance = JOYSTICK_SIZE / 2;
 
     if (distance <= maxDistance) {
-      setJoystickPosition({ x: dx, y: dy });
+      joystickPositionRef.current = { x: dx, y: dy };
     } else {
       const angle = Math.atan2(dy, dx);
-      setJoystickPosition({
+      joystickPositionRef.current = {
         x: Math.cos(angle) * maxDistance,
         y: Math.sin(angle) * maxDistance,
-      });
+      };
     }
   }, []);
 
   const handleTouchEnd = useCallback(() => {
     touchRef.current = null;
     setJoystickActive(false);
-    setJoystickPosition({ x: 0, y: 0 });
+    joystickPositionRef.current = { x: 0, y: 0 };
   }, []);
 
   const triggerHaptic = (intensity: 'light' | 'medium' | 'heavy' = 'light') => {
@@ -1800,7 +1799,8 @@ export const OctoSprint: React.FC = () => {
       
       const speed = baseSpeed;
       const maxDistance = JOYSTICK_SIZE / 2;
-      const intensity = Math.sqrt(joystickPosition.x ** 2 + joystickPosition.y ** 2) / maxDistance;
+      const joystickPos = joystickPositionRef.current;
+      const intensity = Math.sqrt(joystickPos.x ** 2 + joystickPos.y ** 2) / maxDistance;
       
       // Handle keyboard input
       const keyboardVelocity = { x: 0, y: 0 };
@@ -1837,7 +1837,7 @@ export const OctoSprint: React.FC = () => {
             newPlayer.velocity.y = keyboardVelocity.y * speed;
             newPlayer.rotation = Math.atan2(keyboardVelocity.y, keyboardVelocity.x);
           } else {
-            const angle = Math.atan2(joystickPosition.y, joystickPosition.x);
+            const angle = Math.atan2(joystickPos.y, joystickPos.x);
             newPlayer.velocity.x = Math.cos(angle) * speed * intensity;
             newPlayer.velocity.y = Math.sin(angle) * speed * intensity;
             newPlayer.rotation = angle;
@@ -2926,7 +2926,7 @@ export const OctoSprint: React.FC = () => {
     });
 
     updateNextFoodPosition();
-  }, [gameState.isPaused, gameState.isPlaying, gameState.playerEffects, joystickActive, joystickPosition, player, predators, hazards, powerUps, currentLevelConfig, levelProgress, updateNextFoodPosition, environmentalEffects, weatherEffect, createEnvironmentalEffect, createWeatherEffect, getActiveSkillEffects]);
+  }, [gameState.isPaused, gameState.isPlaying, gameState.playerEffects, joystickActive, player, predators, hazards, powerUps, currentLevelConfig, levelProgress, updateNextFoodPosition, environmentalEffects, weatherEffect, createEnvironmentalEffect, createWeatherEffect, getActiveSkillEffects]);
 
   const draw = useCallback(() => {
     try {
@@ -4127,7 +4127,7 @@ export const OctoSprint: React.FC = () => {
       ctx.globalAlpha = 1;
       ctx.fillStyle = joystickActive ? '#00ff00' : '#dddddd';
       ctx.beginPath();
-      ctx.arc(joystickX + joystickPosition.x, joystickY + joystickPosition.y, 20, 0, 2 * Math.PI);
+      ctx.arc(joystickX + joystickPositionRef.current.x, joystickY + joystickPositionRef.current.y, 20, 0, 2 * Math.PI);
       ctx.fill();
       ctx.strokeStyle = '#000000';
       ctx.lineWidth = 3;
@@ -4258,7 +4258,7 @@ export const OctoSprint: React.FC = () => {
       console.error('Draw error:', error);
       // Continue game loop even if draw fails
     }
-  }, [gameObjects, predators, hazards, sonarPulses, particles, scorePopups, powerUps, player, joystickActive, joystickPosition, currentLevelConfig, levelProgress, nextFoodPosition, camera, environmentalEffects, weatherEffect, lightingIntensity, gameState.gameTime, gameState.isPlaying, gameState.showResults, isLowPerformance, gameState.screenShake]);
+  }, [gameObjects, predators, hazards, sonarPulses, particles, scorePopups, powerUps, player, joystickActive, currentLevelConfig, levelProgress, nextFoodPosition, camera, environmentalEffects, weatherEffect, lightingIntensity, gameState.gameTime, gameState.isPlaying, gameState.showResults, isLowPerformance, gameState.screenShake]);
 
   useEffect(() => {
     let lastTime = Date.now();
