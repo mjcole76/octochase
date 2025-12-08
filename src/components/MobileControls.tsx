@@ -90,12 +90,6 @@ export function MobileControls({ onMove, onJump, onPause, onInkCloud, isGameActi
 
   return (
     <div className="fixed inset-0 pointer-events-none z-50">
-      <div 
-        ref={gameAreaRef}
-        className="absolute inset-0 pointer-events-auto"
-        style={{ touchAction: 'none' }}
-      />
-      
       {orientation === 'landscape' && (
         <>
           <div 
