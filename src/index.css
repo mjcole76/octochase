@@ -23,22 +23,19 @@
   --safe-area-inset-left: env(safe-area-inset-left, 0px);
 }
 
-/* Prevent overscroll bounce on iOS but allow normal scrolling */
-html {
-  overscroll-behavior-y: none;
+/* Allow normal scrolling, only prevent overscroll bounce */
+html, body {
+  overscroll-behavior: contain;
+  margin: 0;
+  min-height: 100vh;
+  min-height: 100dvh;
 }
 
 body {
-  margin: 0;
   display: flex;
   place-items: center;
   min-width: 320px;
-  min-height: 100vh;
-  min-height: -webkit-fill-available;
-  min-height: 100dvh;
-  overscroll-behavior-y: none;
   -webkit-overflow-scrolling: touch;
-  /* Prevent text selection on mobile during game */
   -webkit-tap-highlight-color: transparent;
   /* Safe area padding */
   padding-top: var(--safe-area-inset-top);
@@ -47,8 +44,8 @@ body {
   padding-right: var(--safe-area-inset-right);
 }
 
-/* Prevent zoom on double tap for iOS */
-* {
+/* Only prevent zoom on double tap, allow scrolling */
+button, a, input, select, textarea {
   touch-action: manipulation;
 }
 
@@ -56,12 +53,6 @@ body {
 canvas {
   touch-action: none;
   -webkit-touch-callout: none;
-}
-
-/* Allow scrolling in scrollable containers */
-.overflow-auto, .overflow-y-auto, .overflow-scroll, .overflow-y-scroll {
-  -webkit-overflow-scrolling: touch;
-  touch-action: pan-y;
 }
 
 /* Mobile-optimized buttons */

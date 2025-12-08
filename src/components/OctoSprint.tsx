@@ -4405,7 +4405,7 @@ export const OctoSprint: React.FC = () => {
 
   if (!gameState.isPlaying) {
     return (
-      <div className={`flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-blue-900 to-blue-950 text-white relative ${isMobile ? 'px-4' : ''}`}>
+      <div className={`flex flex-col items-center min-h-screen bg-gradient-to-b from-blue-900 to-blue-950 text-white relative ${isMobile ? 'px-4 py-8 overflow-y-auto' : 'justify-center'}`}>
         {/* User Profile Section */}
         <div className={`absolute top-4 ${isMobile ? 'left-4 right-4' : 'right-4'} flex items-center gap-4 ${isMobile ? 'flex-col' : ''}`}>
           {user && authPlayer ? (
