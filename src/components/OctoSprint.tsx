@@ -463,6 +463,8 @@ export const OctoSprint: React.FC = () => {
   const [joystickActive, setJoystickActive] = useState(false);
   // Use ref for joystick position to avoid state update lag on mobile
   const joystickPositionRef = useRef<Position>({ x: 0, y: 0 });
+  // Mobile HTML joystick input (from MobileControls component)
+  const mobileJoystickRef = useRef<Position>({ x: 0, y: 0 });
   const [keysPressed, setKeysPressed] = useState<Set<string>>(new Set());
   const touchRef = useRef<{ startX: number; startY: number; currentX: number; currentY: number } | null>(null);
   const [environmentalEffects, setEnvironmentalEffects] = useState<EnvironmentalEffect[]>([]);
@@ -1733,6 +1735,11 @@ export const OctoSprint: React.FC = () => {
     pauseGame();
   }, [pauseGame]);
 
+  // Analog joystick input from HTML MobileControls (portrait mode)
+  const handleMobileAnalog = useCallback((x: number, y: number) => {
+    mobileJoystickRef.current = { x, y };
+  }, []);
+
   const handleMobileInkCloud = useCallback(() => {
     if (!gameState.isPlaying || gameState.isPaused) return;
     useInkCloud();
@@ -1823,8 +1830,14 @@ export const OctoSprint: React.FC = () => {
       
       const speed = baseSpeed;
       const maxDistance = JOYSTICK_SIZE / 2;
+      
+      // Canvas joystick (drawn on canvas)
       const joystickPos = joystickPositionRef.current;
-      const intensity = Math.sqrt(joystickPos.x ** 2 + joystickPos.y ** 2) / maxDistance;
+      const canvasJoystickIntensity = Math.sqrt(joystickPos.x ** 2 + joystickPos.y ** 2) / maxDistance;
+      
+      // HTML mobile joystick (MobileControls component)
+      const mobileJoystick = mobileJoystickRef.current;
+      const mobileJoystickIntensity = Math.sqrt(mobileJoystick.x ** 2 + mobileJoystick.y ** 2);
       
       // Handle keyboard input
       const keyboardVelocity = { x: 0, y: 0 };
@@ -1839,11 +1852,15 @@ export const OctoSprint: React.FC = () => {
         keyboardVelocity.y /= keyboardIntensity;
       }
       
-      if ((joystickActive && intensity > 0.1) || keyboardIntensity > 0) {
+      // Check all input sources: keyboard, canvas joystick, or HTML mobile joystick
+      const hasInput = keyboardIntensity > 0 || 
+                       (joystickActive && canvasJoystickIntensity > 0.1) || 
+                       mobileJoystickIntensity > 0.1;
+      
+      if (hasInput) {
         if (!gameState.playerEffects.find(e => e.type === 'stun')) {
           // Puzzle mode - decrease moves when player makes a move
           if (gameState.currentGameMode === 'puzzle' && movesRemaining !== null) {
-            // Only decrement if player was previously stationary (velocity near 0)
             const wasStationary = Math.abs(player.velocity.x) < 1 && Math.abs(player.velocity.y) < 1;
             if (wasStationary) {
               setMovesRemaining(prev => {
@@ -1857,13 +1874,21 @@ export const OctoSprint: React.FC = () => {
           }
           
           if (keyboardIntensity > 0) {
+            // Keyboard input
             newPlayer.velocity.x = keyboardVelocity.x * speed;
             newPlayer.velocity.y = keyboardVelocity.y * speed;
             newPlayer.rotation = Math.atan2(keyboardVelocity.y, keyboardVelocity.x);
+          } else if (mobileJoystickIntensity > 0.1) {
+            // HTML mobile joystick (priority in portrait mode)
+            const angle = Math.atan2(mobileJoystick.y, mobileJoystick.x);
+            newPlayer.velocity.x = Math.cos(angle) * speed * mobileJoystickIntensity;
+            newPlayer.velocity.y = Math.sin(angle) * speed * mobileJoystickIntensity;
+            newPlayer.rotation = angle;
           } else {
+            // Canvas joystick
             const angle = Math.atan2(joystickPos.y, joystickPos.x);
-            newPlayer.velocity.x = Math.cos(angle) * speed * intensity;
-            newPlayer.velocity.y = Math.sin(angle) * speed * intensity;
+            newPlayer.velocity.x = Math.cos(angle) * speed * canvasJoystickIntensity;
+            newPlayer.velocity.y = Math.sin(angle) * speed * canvasJoystickIntensity;
             newPlayer.rotation = angle;
           }
         }
@@ -4791,6 +4816,7 @@ export const OctoSprint: React.FC = () => {
         onJump={handleMobileJump}
         onPause={handleMobilePause}
         onInkCloud={handleMobileInkCloud}
+        onMoveAnalog={handleMobileAnalog}
         isGameActive={gameState.isPlaying && !gameState.isPaused}
       />
 

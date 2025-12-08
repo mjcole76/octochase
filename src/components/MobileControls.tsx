@@ -1,6 +1,6 @@
 import React from 'react'
 import { Button } from './ui/button'
-import { useIsMobile, useTouchGestures, useHapticFeedback, useDeviceOrientation } from '../hooks/use-mobile'
+import { useIsMobile, useHapticFeedback, useDeviceOrientation } from '../hooks/use-mobile'
 
 interface MobileControlsProps {
   onMove: (direction: 'left' | 'right' | 'up' | 'down') => void
@@ -8,35 +8,68 @@ interface MobileControlsProps {
   onPause: () => void
   onInkCloud?: () => void
   isGameActive: boolean
+  // New: continuous movement callback
+  onMoveAnalog?: (x: number, y: number) => void
 }
 
-export function MobileControls({ onMove, onJump, onPause, onInkCloud, isGameActive }: MobileControlsProps) {
+export function MobileControls({ onMove, onJump, onPause, onInkCloud, isGameActive, onMoveAnalog }: MobileControlsProps) {
   const isMobile = useIsMobile()
   const orientation = useDeviceOrientation()
   const { lightVibration, mediumVibration } = useHapticFeedback()
-  const gameAreaRef = React.useRef<HTMLDivElement>(null)
-  const { gesture, clearGesture } = useTouchGestures(gameAreaRef)
+  
+  // Virtual joystick state
+  const joystickRef = React.useRef<HTMLDivElement>(null)
+  const [joystickActive, setJoystickActive] = React.useState(false)
+  const [joystickPos, setJoystickPos] = React.useState({ x: 0, y: 0 })
+  const touchStartRef = React.useRef<{ x: number, y: number } | null>(null)
 
-  React.useEffect(() => {
-    if (gesture && isGameActive) {
-      switch (gesture.type) {
-        case 'swipe':
-          if (gesture.direction) {
-            onMove(gesture.direction)
-            lightVibration()
-          }
-          break
-        case 'tap':
-          onJump()
-          mediumVibration()
-          break
-        case 'longpress':
-          onPause()
-          break
-      }
-      clearGesture()
+  // Handle joystick touch
+  const handleJoystickStart = (e: React.TouchEvent) => {
+    e.preventDefault()
+    e.stopPropagation()
+    const touch = e.touches[0]
+    const rect = joystickRef.current?.getBoundingClientRect()
+    if (!rect) return
+    
+    const centerX = rect.left + rect.width / 2
+    const centerY = rect.top + rect.height / 2
+    touchStartRef.current = { x: centerX, y: centerY }
+    setJoystickActive(true)
+    lightVibration()
+  }
+
+  const handleJoystickMove = (e: React.TouchEvent) => {
+    e.preventDefault()
+    if (!touchStartRef.current || !joystickActive) return
+    
+    const touch = e.touches[0]
+    const maxDistance = 50
+    
+    let dx = touch.clientX - touchStartRef.current.x
+    let dy = touch.clientY - touchStartRef.current.y
+    const distance = Math.sqrt(dx * dx + dy * dy)
+    
+    if (distance > maxDistance) {
+      dx = (dx / distance) * maxDistance
+      dy = (dy / distance) * maxDistance
     }
-  }, [gesture, isGameActive, onMove, onJump, onPause, clearGesture, lightVibration, mediumVibration])
+    
+    setJoystickPos({ x: dx, y: dy })
+    
+    // Call analog move if available
+    if (onMoveAnalog) {
+      onMoveAnalog(dx / maxDistance, dy / maxDistance)
+    }
+  }
+
+  const handleJoystickEnd = () => {
+    setJoystickActive(false)
+    setJoystickPos({ x: 0, y: 0 })
+    touchStartRef.current = null
+    if (onMoveAnalog) {
+      onMoveAnalog(0, 0)
+    }
+  }
 
   if (!isMobile) return null
 
@@ -137,10 +170,53 @@ export function MobileControls({ onMove, onJump, onPause, onInkCloud, isGameActi
 
       {orientation === 'portrait' && isGameActive && (
         <>
-          {/* Portrait mode: Use joystick on canvas (bottom-left) + action buttons (bottom-right) */}
+          {/* Portrait mode: Virtual joystick (left) + action buttons (right) */}
+          
+          {/* VIRTUAL JOYSTICK - Left side */}
           <div 
-            className="absolute right-4 flex flex-col items-center space-y-4 pointer-events-auto z-50"
-            style={{ bottom: 'max(2rem, calc(env(safe-area-inset-bottom) + 1rem))' }}
+            ref={joystickRef}
+            className="absolute pointer-events-auto z-50"
+            style={{ 
+              left: '24px',
+              bottom: 'max(24px, calc(env(safe-area-inset-bottom) + 16px))',
+              width: '140px',
+              height: '140px',
+              touchAction: 'none'
+            }}
+            onTouchStart={handleJoystickStart}
+            onTouchMove={handleJoystickMove}
+            onTouchEnd={handleJoystickEnd}
+            onTouchCancel={handleJoystickEnd}
+          >
+            {/* Joystick base */}
+            <div 
+              className="absolute inset-0 rounded-full border-4 border-white/50 bg-black/40"
+              style={{ boxShadow: '0 0 20px rgba(0,255,255,0.3)' }}
+            />
+            {/* Joystick knob */}
+            <div 
+              className="absolute rounded-full bg-cyan-400 border-4 border-white shadow-lg"
+              style={{ 
+                width: '60px',
+                height: '60px',
+                left: `calc(50% - 30px + ${joystickPos.x}px)`,
+                top: `calc(50% - 30px + ${joystickPos.y}px)`,
+                boxShadow: joystickActive ? '0 0 25px rgba(0,255,255,0.8)' : '0 0 10px rgba(0,255,255,0.4)',
+                transition: joystickActive ? 'none' : 'all 0.2s ease-out'
+              }}
+            />
+            {/* Label */}
+            {!joystickActive && (
+              <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                <span className="text-white/70 text-xs font-bold">MOVE</span>
+              </div>
+            )}
+          </div>
+
+          {/* Action buttons - Right side */}
+          <div 
+            className="absolute right-4 flex flex-col items-center space-y-3 pointer-events-auto z-50"
+            style={{ bottom: 'max(24px, calc(env(safe-area-inset-bottom) + 16px))' }}
           >
             <Button
               variant="outline"
@@ -163,15 +239,6 @@ export function MobileControls({ onMove, onJump, onPause, onInkCloud, isGameActi
             >
               💨
             </Button>
-          </div>
-
-          <div 
-            className="absolute left-1/2 transform -translate-x-1/2 pointer-events-auto max-w-[90vw] z-50"
-            style={{ top: 'max(1rem, calc(env(safe-area-inset-top) + 0.5rem))' }}
-          >
-            <div className="bg-black/70 backdrop-blur-sm rounded-lg px-3 py-2 text-white text-xs text-center">
-              <p>🕹️ Joystick: Move • ⚡: Dash • 💨: Ink</p>
-            </div>
           </div>
         </>
       )}
