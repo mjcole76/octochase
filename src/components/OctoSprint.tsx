@@ -161,7 +161,7 @@ const BASE_GAME_HEIGHT = 800;  // Base height for desktop
 const WORLD_WIDTH = 1400;  // Increased proportionally
 const WORLD_HEIGHT = 1000;  // Increased proportionally
 const PLAYER_SIZE = 40;
-const JOYSTICK_SIZE = 80;
+const JOYSTICK_SIZE = 120; // Larger joystick for easier mobile control
 
 // Helper to calculate responsive game dimensions
 const getResponsiveGameDimensions = (isMobile: boolean, orientation: 'portrait' | 'landscape') => {
@@ -1534,24 +1534,31 @@ export const OctoSprint: React.FC = () => {
     const rect = canvasRef.current?.getBoundingClientRect();
     if (!rect) return;
 
-    const x = (touch.clientX - rect.left) * (GAME_WIDTH / rect.width);
-    const y = (touch.clientY - rect.top) * (GAME_HEIGHT / rect.height);
-
-    // Expand joystick area significantly for better mobile experience
-    const joystickX = 80;
-    const joystickY = GAME_HEIGHT - 80;
-    const distance = Math.sqrt((x - joystickX) ** 2 + (y - joystickY) ** 2);
+    // Get touch position relative to canvas
+    const touchX = touch.clientX - rect.left;
+    const touchY = touch.clientY - rect.top;
     
-    // Much larger touch area for joystick - entire left third of screen
-    if (distance < JOYSTICK_SIZE * 2 || (x < GAME_WIDTH / 3 && y > GAME_HEIGHT - 300)) {
+    // Scale to game coordinates
+    const x = touchX * (GAME_WIDTH / rect.width);
+    const y = touchY * (GAME_HEIGHT / rect.height);
+
+    // Joystick center position (in game coordinates)
+    const joystickX = 120;
+    const joystickY = GAME_HEIGHT - 120;
+    
+    // SIMPLIFIED: Left 60% of canvas = joystick area (very forgiving for mobile)
+    const isLeftSide = touchX < rect.width * 0.6;
+    
+    if (isLeftSide) {
+      // Use the touch point as the joystick center for more intuitive control
       touchRef.current = {
-        startX: joystickX,
-        startY: joystickY,
+        startX: x,  // Use actual touch position as center
+        startY: y,
         currentX: x,
         currentY: y,
       };
       setJoystickActive(true);
-      triggerHaptic('light'); // Provide feedback when joystick activates
+      triggerHaptic('light');
     }
   }, []);
 
@@ -4127,62 +4134,65 @@ export const OctoSprint: React.FC = () => {
       ctx.save();
       ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset to identity matrix
 
-      // Show large touch area indicator - much bigger for better visibility
-      ctx.globalAlpha = joystickActive ? 0.4 : 0.2;
-      ctx.fillStyle = '#00ffff';
-      ctx.beginPath();
-      ctx.arc(80, GAME_HEIGHT - 80, 150, 0, 2 * Math.PI);
-      ctx.fill();
+      // Default joystick position (when not active)
+      const defaultJoystickX = 100;
+      const defaultJoystickY = GAME_HEIGHT - 100;
       
-      // Add visual guide text
+      // Use touch start position when active, otherwise use default
+      const joystickX = touchRef.current ? touchRef.current.startX : defaultJoystickX;
+      const joystickY = touchRef.current ? touchRef.current.startY : defaultJoystickY;
+
+      // Show touch area hint when not active
       if (!joystickActive) {
+        ctx.globalAlpha = 0.15;
+        ctx.fillStyle = '#00ffff';
+        // Show hint on left side of screen
+        ctx.fillRect(0, 0, GAME_WIDTH * 0.5, GAME_HEIGHT);
+        
         ctx.globalAlpha = 0.8;
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 14px Arial';
+        ctx.font = 'bold 16px Arial';
         ctx.textAlign = 'center';
-        ctx.fillText('TAP HERE', 80, GAME_HEIGHT - 120);
-        ctx.font = '12px Arial';
-        ctx.fillText('TO MOVE', 80, GAME_HEIGHT - 105);
+        ctx.fillText('TAP LEFT SIDE', GAME_WIDTH * 0.25, GAME_HEIGHT / 2 - 10);
+        ctx.font = '14px Arial';
+        ctx.fillText('TO MOVE', GAME_WIDTH * 0.25, GAME_HEIGHT / 2 + 15);
+      }
+      
+      // Only draw the joystick circle when active (at touch position)
+      if (joystickActive && touchRef.current) {
+        ctx.save();
+        
+        // Outer ring
+        ctx.globalAlpha = 0.6;
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(joystickX, joystickY, JOYSTICK_SIZE, 0, 2 * Math.PI);
+        ctx.stroke();
+        
+        // Inner circle background
+        ctx.globalAlpha = 0.3;
+        ctx.fillStyle = '#00ffff';
+        ctx.beginPath();
+        ctx.arc(joystickX, joystickY, JOYSTICK_SIZE - 5, 0, 2 * Math.PI);
+        ctx.fill();
+        
+        // Joystick knob (moves with finger)
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = '#00ff00';
+        ctx.shadowColor = '#00ff00';
+        ctx.shadowBlur = 15;
+        ctx.beginPath();
+        ctx.arc(joystickX + joystickPositionRef.current.x, joystickY + joystickPositionRef.current.y, 30, 0, 2 * Math.PI);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        
+        ctx.restore();
       }
 
-      // Always show joystick for better visibility
-      const joystickX = 80;
-      const joystickY = GAME_HEIGHT - 80;
-      
-      ctx.save();
-      ctx.globalAlpha = joystickActive ? 0.9 : 0.6;
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.arc(joystickX, joystickY, JOYSTICK_SIZE / 2, 0, 2 * Math.PI);
-      ctx.stroke();
-      
-      // Inner circle
-      ctx.globalAlpha = joystickActive ? 0.7 : 0.3;
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.arc(joystickX, joystickY, JOYSTICK_SIZE / 2 - 5, 0, 2 * Math.PI);
-      ctx.fill();
-      
-      // Joystick knob
-      ctx.globalAlpha = 1;
-      ctx.fillStyle = joystickActive ? '#00ff00' : '#dddddd';
-      ctx.beginPath();
-      ctx.arc(joystickX + joystickPositionRef.current.x, joystickY + joystickPositionRef.current.y, 20, 0, 2 * Math.PI);
-      ctx.fill();
-      ctx.strokeStyle = '#000000';
-      ctx.lineWidth = 3;
-      ctx.stroke();
-      
-      // Add "MOVE" text when not active
-      if (!joystickActive) {
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 12px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText('MOVE', joystickX, joystickY + 4);
-      }
-
-      ctx.restore(); // End joystick rendering
       ctx.restore(); // End UI transform
     }
 
